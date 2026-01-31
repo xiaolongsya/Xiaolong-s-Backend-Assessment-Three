@@ -20,7 +20,7 @@ public class JwtUtils
     //获取签名密钥
     public Key getSecretKey()
     {
-        return Keys.hmacShaKeyFor(secretKey.getBytes());;
+        return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
     //生成Token

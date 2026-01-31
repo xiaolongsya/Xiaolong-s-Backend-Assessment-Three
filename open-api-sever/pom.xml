@@ -81,6 +81,17 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.2.0</version> <!-- 稳定版，可前往 Maven 中央仓库查询最新版 -->
         </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.25</version> <!-- 工具类（ID生成、JSON、日期等） -->
+        </dependency>
+        <!-- Fastjson 2 核心依赖：JSON 解析与序列化 -->
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+            <version>2.0.48</version> <!-- 稳定版，可前往 Maven 中央仓库查询最新版 -->
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>

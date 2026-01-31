@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Select;
 import org.springframework.security.core.userdetails.User;
 
 @Mapper
-public interface userMapper extends BaseMapper<User>
+public interface UserMapper extends BaseMapper<User>
 {
     //通过apikey查询用户
     @Select("select * from user where api_key = #{apiKey}")

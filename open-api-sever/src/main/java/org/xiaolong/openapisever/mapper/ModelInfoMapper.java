@@ -5,6 +5,6 @@ import org.apache.ibatis.annotations.Mapper;
 import org.xiaolong.openapisever.entity.ModelInfo;
 
 @Mapper
-public interface modelInfoMapper extends BaseMapper<ModelInfo>
+public interface ModelInfoMapper extends BaseMapper<ModelInfo>
 {
 }
