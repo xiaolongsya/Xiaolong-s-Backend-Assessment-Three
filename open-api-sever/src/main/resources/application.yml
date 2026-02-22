@@ -1,4 +1,5 @@
-port: 8081
+server:
+  port: 8081
 #配置数据库,ip为124.221.211.146，数据库名为kaohe3
 spring:
   datasource:
@@ -8,5 +9,5 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 jwt:
-  secret-key: hnopodvcvopikawsehuirpokcdgvpokwaehui
+  secret-key: thisIsApiKey
   expiration: 72000000

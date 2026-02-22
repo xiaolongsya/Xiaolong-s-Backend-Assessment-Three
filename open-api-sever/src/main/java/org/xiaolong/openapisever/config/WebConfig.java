@@ -17,5 +17,8 @@ public class WebConfig implements WebMvcConfigurer
     {
         registry.addInterceptor(jwtAuthInterceptor)
                 .addPathPatterns("/**");
+
+
+
     }
 }
