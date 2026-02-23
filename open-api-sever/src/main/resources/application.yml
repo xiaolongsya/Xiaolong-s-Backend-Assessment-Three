@@ -11,3 +11,8 @@ spring:
 jwt:
   secret-key: thisIsApiKey
   expiration: 72000000
+
+#deepseekApi
+deepseekApi:
+    url: https://api.deepseek.com/v1
+    key: sk-3bd94879d89549fd9cd9cd2b448296a0
