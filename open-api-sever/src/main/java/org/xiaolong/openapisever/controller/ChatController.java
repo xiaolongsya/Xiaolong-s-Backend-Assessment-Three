@@ -7,15 +7,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.xiaolong.openapisever.entity.ChatCompletion;
 import org.xiaolong.openapisever.model.dto.ChatCompletionRequestDTO;
 import org.xiaolong.openapisever.model.vo.ChatCompletionResponseVO;
 import org.xiaolong.openapisever.service.ChatService;
 import reactor.core.publisher.Flux;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,13 +26,12 @@ public class ChatController {
     @Autowired
     private WebClient webClient;
 
-    @Value("${deepseekApi.url")
-    private String deepseekUrl;
+    // 阿里云百炼配置（对应yml中的dashscope）
+    @Value("${dashscope.key}")
+    private String dashscopeKey;
 
-    @Value("${deepseekApi.key")
-    private String deepseekKey;
-
-    // --- 省略 getCompletionDetail, deleteCompletion, listModels 等已实现方法 ---
+    @Value("${dashscope.url}")
+    private String dashscopeUrl;
 
     @PostMapping(value = "/completions", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
     public Object chatCompletions(@RequestBody ChatCompletionRequestDTO request, HttpServletRequest httpRequest) {
@@ -46,71 +41,118 @@ public class ChatController {
         // 1. 预先持久化请求记录
         String completionId = chatService.saveRequest(userId, request);
 
-        if (Boolean.TRUE.equals(request.getStream())) {
-            return handleDeepSeekStream(request, completionId);
-        } else {
-            return handleDeepSeekBlocking(request, completionId);
+        // 打印配置验证（测试用，生产环境建议删除）
+        log.info("=== 阿里云百炼配置验证 ===");
+        log.info("URL: {}", dashscopeUrl);
+        log.info("Key: {}", dashscopeKey == null ? "NULL" : "******" + dashscopeKey.substring(dashscopeKey.length() - 6));
+        log.info("请求模型: {}", request.getModel());
+        log.info("是否流式: {}", request.getStream());
+
+        try {
+            if (Boolean.TRUE.equals(request.getStream())) {
+                return handleDashScopeStream(request, completionId);
+            } else {
+                return handleDashScopeBlocking(request, completionId);
+            }
+        } catch (Exception e) {
+            log.error("调用阿里云百炼接口异常", e);
+            // 异常时更新数据库状态
+            chatService.completeRequest(completionId, "接口调用异常：" + e.getMessage());
+            throw e;
         }
     }
 
     /**
-     * 实战：调用 DeepSeek 流式接口
+     * 调用阿里云百炼 流式接口（兼容OpenAI格式）
      */
-    private Flux<String> handleDeepSeekStream(ChatCompletionRequestDTO request, String completionId) {
+    private Flux<String> handleDashScopeStream(ChatCompletionRequestDTO request, String completionId) {
         StringBuilder fullContent = new StringBuilder();
 
         return webClient.post()
-                .uri(deepseekUrl + "/chat/completions")
-                .header("Authorization", "Bearer " + deepseekKey)
+                // 拼接完整接口地址：/compatible-mode/v1/chat/completions
+                .uri(dashscopeUrl)
+                // 关键修复：改回Bearer认证格式（百炼兼容接口要求）
+                .header("Authorization", "Bearer " + dashscopeKey)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request) // 直接透传请求 DTO
+                .bodyValue(request)
                 .retrieve()
                 .bodyToFlux(String.class)
                 .map(data -> {
-                    // 2. 这里的 data 是 DeepSeek 返回的一帧数据
+                    // 过滤空数据和结束标记
+                    if (data == null || data.isEmpty() || data.contains("[DONE]")) {
+                        return data;
+                    }
+                    // 提取并拼接流式内容
                     if (data.contains("\"content\":\"")) {
                         String content = parseContentFromJson(data);
                         fullContent.append(content);
+                        log.debug("流式内容片段: {}", content);
                     }
-                    // 3. 原样转发 SSE 帧
+                    // 原样返回SSE帧（保持和前端兼容）
                     return data + "\n\n";
                 })
                 .doFinally(signalType -> {
-                    // 4. 流结束时（正常或异常），将全量内容异步存入数据库
-                    log.info("流输出结束，正在持久化完整内容...");
+                    // 流结束时持久化完整内容
+                    log.info("流式请求结束，完整回复内容: {}", fullContent);
                     chatService.completeRequest(completionId, fullContent.toString());
+                })
+                .onErrorResume(e -> {
+                    log.error("流式接口调用异常", e);
+                    chatService.completeRequest(completionId, "流式调用异常：" + e.getMessage());
+                    return Flux.just("data: {\"error\":\"" + e.getMessage() + "\"}\n\n");
                 });
     }
 
     /**
-     * 实战：调用 DeepSeek 非流式接口
+     * 调用阿里云百炼 非流式接口
      */
-    private ChatCompletionResponseVO handleDeepSeekBlocking(ChatCompletionRequestDTO request, String completionId) {
-        // 使用 WebClient 同步等待结果 (block)
+    private ChatCompletionResponseVO handleDashScopeBlocking(ChatCompletionRequestDTO request, String completionId) {
+        // 同步调用百炼接口
         ChatCompletionResponseVO response = webClient.post()
-                .uri(deepseekUrl + "/chat/completions")
-                .header("Authorization", "Bearer " + deepseekKey)
+                .uri(dashscopeUrl)
+                // 关键修复：改回Bearer认证格式
+                .header("Authorization", "Bearer " + dashscopeKey)
+                .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(ChatCompletionResponseVO.class)
                 .block();
 
-        if (response != null && !response.getChoices().isEmpty()) {
-            String content = response.getChoices().get(0).getMessage().getContent();
-            // 5. 更新数据库为完成状态
-            chatService.completeRequest(completionId, content);
+        // 处理返回结果
+        if (response == null) {
+            log.warn("百炼非流式接口返回空响应");
+            chatService.completeRequest(completionId, "接口返回空响应");
+            return null;
         }
+
+        if (!response.getChoices().isEmpty()) {
+            String content = response.getChoices().get(0).getMessage().getContent();
+            log.info("非流式回复内容: {}", content);
+            chatService.completeRequest(completionId, content);
+        } else {
+            log.warn("百炼接口返回无choices数据");
+            chatService.completeRequest(completionId, "接口返回无有效内容");
+        }
+
         return response;
     }
 
     /**
-     * 简单的正则工具：从 JSON 字符串中提取 content 字段
+     * 提取JSON中的content字段（兼容百炼返回格式）
      */
     private String parseContentFromJson(String json) {
-        Pattern pattern = Pattern.compile("\"content\":\"(.*?)\"");
-        Matcher matcher = pattern.matcher(json);
-        if (matcher.find()) {
-            return matcher.group(1).replace("\\n", "\n").replace("\\\"", "\"");
+        try {
+            Pattern pattern = Pattern.compile("\"content\":\"(.*?)\"");
+            Matcher matcher = pattern.matcher(json);
+            if (matcher.find()) {
+                // 还原转义字符
+                return matcher.group(1)
+                        .replace("\\n", "\n")
+                        .replace("\\\"", "\"")
+                        .replace("\\\\", "\\");
+            }
+        } catch (Exception e) {
+            log.error("解析content字段异常", e);
         }
         return "";
     }

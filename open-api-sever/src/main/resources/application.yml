@@ -12,7 +12,6 @@ jwt:
   secret-key: thisIsApiKey
   expiration: 72000000
 
-#deepseekApi
-deepseekApi:
-    url: https://api.deepseek.com/v1
-    key: sk-3bd94879d89549fd9cd9cd2b448296a0
+dashscope:
+  url: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions  # 对话地址
+  key: sk-95d315f6d5684c0bbafaf23cafac9ce9

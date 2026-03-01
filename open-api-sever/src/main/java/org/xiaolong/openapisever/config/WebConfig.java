@@ -9,22 +9,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.xiaolong.openapisever.interceptor.JwtAuthInterceptor;
 
 @Configuration
-public class WebConfig implements WebMvcConfigurer
-{
+public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private JwtAuthInterceptor jwtAuthInterceptor;
 
     @Override
-    public void addInterceptors(InterceptorRegistry registry)
-    {
+    public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(jwtAuthInterceptor)
-                .addPathPatterns("/**");
-
-
-
+                .addPathPatterns("/**") // 拦截所有路径
+                .excludePathPatterns("/v1/chat/completions"); // 排除 AI 接口，不做 JWT 校验
     }
-    @Bean
-    public WebClient webClient(WebClient.Builder builder) {
-        return builder.build();
-    }
+
 }
