@@ -9,7 +9,8 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 jwt:
-  secret-key: thisIsApiKey
+  # 注意：JJWT 对 HS256 密钥长度有要求（建议 >= 32 字符），否则所有 Token 都会校验失败
+  secret-key: thisIsApiKey-thisIsApiKey-thisIsApiKey-32
   expiration: 72000000
 
 dashscope:

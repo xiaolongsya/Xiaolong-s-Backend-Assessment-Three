@@ -4,6 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.xiaolong.openapisever.exception.InvalidRequestException;
+import org.xiaolong.openapisever.exception.NotFoundException;
 import org.xiaolong.openapisever.exception.UnauthorizedException;
 
 import java.util.HashMap;
@@ -11,6 +13,36 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 处理非法请求参数 (400) - OpenAI 风格
+     */
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidRequestException(InvalidRequestException e) {
+        Map<String, String> errorDetails = new HashMap<>();
+        errorDetails.put("message", e.getMessage());
+        errorDetails.put("type", "invalid_request_error");
+
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", errorDetails);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    /**
+     * 资源不存在 (404) - OpenAI 风格
+     */
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFoundException(NotFoundException e) {
+        Map<String, String> errorDetails = new HashMap<>();
+        errorDetails.put("message", e.getMessage());
+        errorDetails.put("type", "invalid_request_error");
+
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", errorDetails);
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
 
     /**
      * 处理鉴权失败异常 (401)

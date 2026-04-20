@@ -16,8 +16,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(jwtAuthInterceptor)
-                .addPathPatterns("/**") // 拦截所有路径
-                .excludePathPatterns("/v1/chat/completions"); // 排除 AI 接口，不做 JWT 校验
+                // 仅对 API 路径做 Bearer Token 鉴权（满足考核：所有 API 都需鉴权）
+                .addPathPatterns("/v1/**");
     }
 
 }

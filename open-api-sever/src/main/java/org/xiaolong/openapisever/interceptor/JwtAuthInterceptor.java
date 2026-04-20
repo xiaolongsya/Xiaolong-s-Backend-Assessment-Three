@@ -38,9 +38,9 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
             if (!isValid) {
                 throw new UnauthorizedException("Invalid API key");
             }
-            // (可选) 如果验证通过，你可以从 token 中解析出 userId 并塞进 request attribute 中，方便后续 Controller 使用
-            // String userId = JwtUtils.getUserIdFromToken(token);
-            // request.setAttribute("userId", userId);
+            // 验证通过后，从 JWT subject 中解析 userId，供 Controller 记录与审计
+            String userId = jwtUtils.parseToken(token);
+            request.setAttribute("userId", userId);
 
             return true; // 验证通过，放行
         } catch (Exception e) {

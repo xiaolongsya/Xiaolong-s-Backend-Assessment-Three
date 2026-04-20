@@ -24,11 +24,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 3. 权限配置
                 .authorizeHttpRequests(auth -> auth
-                        // 精准放行 AI 接口（支持所有请求方法）
-                        .requestMatchers("/v1/chat/completions").permitAll()
                         // 可选：放行 Swagger 文档接口（如果有）
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // 全局放行所有接口（仅测试阶段使用）
+                // 说明：API 鉴权由 WebMvc 拦截器（JwtAuthInterceptor）负责
                         .anyRequest().permitAll()
                 );
         return http.build();

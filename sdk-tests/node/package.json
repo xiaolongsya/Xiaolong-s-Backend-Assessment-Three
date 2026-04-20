@@ -1,0 +1,9 @@
+{
+  "name": "openai-compatible-sdk-test",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "openai": "^4.0.0"
+  }
+}
